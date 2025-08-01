@@ -1,0 +1,36 @@
+name: Actualizar trámites
+
+on:
+  schedule:
+    - cron: '0 4 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    name: actualizar
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests httpx[http2] asyncio tqdm
+      - name: correr
+        run: |
+          python update.py
+      - name: commit
+        run: |
+            git config --global user.email "tramites-bot@example.com"
+            git config --global user.name "tramites-bot"
+            git add -A
+            git diff --quiet && git diff --staged --quiet || (git commit -m "[ci] $(date '+%Y-%m-%d')"; git push -q "https://$GH_TOKEN@github.com/mauforonda/tramites-bo.git" main)
