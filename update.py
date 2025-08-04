@@ -100,8 +100,11 @@ async def main():
     for data, filename in zip(
         [tramites_sorted, errores_tramites], ["tramites", "errores"]
     ):
-        with open(f"{filename}.json", "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
+        if data:
+            with open(f"{filename}.json", "w", encoding="utf-8") as f:
+                for entry in data:
+                    json_line = json.dumps(entry, ensure_ascii=False)
+                    f.write(json_line + "\n")
     print(f"Detalles guardados: {len(tramites_sorted)} trámites | {len(errores_tramites)} errores.")
 
 if __name__ == "__main__":
