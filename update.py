@@ -10,8 +10,6 @@ from datetime import datetime, timezone
 import pandas as pd
 import os
 
-pd.read_csv("modificaciones.csv")
-
 
 def listarTramites(pageSize=30):
     print("Listando trámites ...")
@@ -138,7 +136,7 @@ async def main():
     print("Descargando detalles de todos los trámites ...")
 
     timestamp = datetime.now(timezone.utc).isoformat(timespec="minutes")
-    tramites, errores_tramites = await getTramites(tramitesListado, max_tramites=30)
+    tramites, errores_tramites = await getTramites(tramitesListado)
     if os.path.exists(FILENAME):
         tramites_df = pd.json_normalize(tramites)
         with jsonlines.open(FILENAME, "r") as f:
