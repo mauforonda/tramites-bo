@@ -33,4 +33,4 @@ jobs:
             git config --global user.email "tramites-bot@example.com"
             git config --global user.name "tramites-bot"
             git add -A
-            git diff --quiet && git diff --staged --quiet || (git commit -m "[ci] $(date '+%Y-%m-%d')"; git push -q "https://$GH_TOKEN@github.com/mauforonda/tramites-bo.git" main)
+            git diff --quiet && git diff --staged --quiet || (git commit -m "[ci] $(date '+%Y-%m-%d')"; git push -q "https://$GH_TOKEN@github.com:datosbolivia/tramites-bo.git" main)
