@@ -73,30 +73,34 @@ async def getTramites(tramitesListado, max_concurrent=10, max_tramites=None):
 
 def detectarModificaciones(df1, df2, timestamp):
     FILENAME = "modificaciones.csv"
-    a, b = df1.set_index("id").copy(), df2.set_index("id").copy()
-    nombres = a.nombre.to_dict()
-    entidades = a["entidad.nombre"].to_dict()
-    cols = [c for c in a.columns if c in b.columns and c != "id"]
-    idx = a.index.intersection(b.index)
-    a, b = a.loc[idx, cols], b.loc[idx, cols]
+    _df1, _df2 = df1.set_index("id").copy(), df2.set_index("id").copy()
+    nombres = _df1.nombre.to_dict()
+    entidades = _df1["entidad.nombre"].to_dict()
+    cols = [c for c in _df1.columns if c in _df2.columns and c != "id"]
+    idx = _df1.index.intersection(_df2.index)
+    _df1, _df2 = _df1.loc[idx, cols], _df2.loc[idx, cols]
     parts = []
-    for c in cols:
-        o, n = a[c], b[c]
-        m = o.ne(n) & ~(o.isna() & n.isna())
-        if m.any():
+    for col in cols:
+        old, new = _df1[col], _df2[col]
+        modified = old.ne(new) & ~(old.isna() & new.isna())
+        if modified.any():
             parts.append(
                 pd.DataFrame(
                     {
                         "timestamp": timestamp,
-                        "id": o.index[m].values,
-                        "entidad": [entidades[v] for v in o.index[m].values],
-                        "nombre": [nombres[v] for v in o.index[m].values],
-                        "columna": c,
-                        "viejo": o[m].values,
-                        "nuevo": n[m].values,
+                        "id": old.index[modified].values,
+                        "entidad": [entidades[v] for v in old.index[modified].values],
+                        "nombre": [nombres[v] for v in old.index[m].values],
+                        "columna": col,
+                        "viejo": old[modified].values,
+                        "nuevo": new[modified].values,
                     }
                 )
             )
+    if len(parts) == 0:
+        print('No se detectarón modificaciones')
+        return
+
     modificaciones = pd.concat(parts, ignore_index=True)
     if os.path.exists(FILENAME):
         modificaciones = pd.concat([pd.read_csv(FILENAME), modificaciones])
@@ -132,18 +136,21 @@ async def main():
     
     FILENAME = "tramites.jsonl"
     tramitesListado = listarTramites()
+    print(f'Tramites listados {len(tramitesListado)}')
 
-    print("Descargando detalles de todos los trámites ...")
+    hoy_yyyymmdd = datetime.strftime(datetime.now(), '%Y-%m-%d')
+
+    print(f"Descargando detalles de todos los trámites ...{hoy_yyyymmdd}")
 
     timestamp = datetime.now(timezone.utc).isoformat(timespec="minutes")
     tramites, errores_tramites = await getTramites(tramitesListado)
     if os.path.exists(FILENAME):
         tramites_df = pd.json_normalize(tramites)
         with jsonlines.open(FILENAME, "r") as f:
-            tramites_previo = pd.json_normalize([line for line in f])
+            tramites_previos = pd.json_normalize([line for line in f])
     
-        detectarAdiciones(tramites_previo, tramites_df, timestamp)
-        detectarModificaciones(tramites_previo, tramites_df, timestamp)
+        detectarAdiciones(tramites_previos, tramites_df, timestamp)
+        detectarModificaciones(tramites_previos, tramites_df, timestamp)
 
     tramites_sorted = sorted(tramites, key=lambda d: d["id"])
     for data, filename in zip(
