@@ -97,12 +97,13 @@ def detectarModificaciones(df1, df2, timestamp):
                     }
                 )
             )
-    modificaciones = pd.concat(parts, ignore_index=True)
-    if os.path.exists(FILENAME):
-        modificaciones = pd.concat([pd.read_csv(FILENAME), modificaciones])
-    modificaciones.sort_values(["timestamp", "id", "columna"]).to_csv(
-        FILENAME, index=False
-    )
+    if parts:
+        modificaciones = pd.concat(parts, ignore_index=True)
+        if os.path.exists(FILENAME):
+            modificaciones = pd.concat([pd.read_csv(FILENAME), modificaciones])
+        modificaciones.sort_values(["timestamp", "id", "columna"]).to_csv(
+            FILENAME, index=False
+        )
 
 
 def detectarAdiciones(df1, df2, timestamp):
@@ -122,10 +123,12 @@ def detectarAdiciones(df1, df2, timestamp):
         ]
     )
 
-    if os.path.exists(FILENAME):
-        eventos = pd.concat([pd.read_csv(FILENAME), eventos])
+    if eventos.shape[0] > 0:
 
-    eventos.sort_values(["timestamp", "id", "tipo"]).to_csv(FILENAME, index=False)
+        if os.path.exists(FILENAME):
+            eventos = pd.concat([pd.read_csv(FILENAME), eventos])
+    
+        eventos.sort_values(["timestamp", "id", "tipo"]).to_csv(FILENAME, index=False)
 
 
 async def main():
