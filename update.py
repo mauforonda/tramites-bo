@@ -90,7 +90,7 @@ def detectarModificaciones(df1, df2, timestamp):
                         "timestamp": timestamp,
                         "id": old.index[modified].values,
                         "entidad": [entidades[v] for v in old.index[modified].values],
-                        "nombre": [nombres[v] for v in old.index[m].values],
+                        "nombre": [nombres[v] for v in old.index[modified].values],
                         "columna": col,
                         "viejo": old[modified].values,
                         "nuevo": new[modified].values,
