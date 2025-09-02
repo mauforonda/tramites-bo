@@ -1,12 +1,17 @@
-# Obtención de trámites del portal gob.bo
+Datos de trámites en entidades del gobierno boliviano tomados directamente del [portal oficial](https://gob.bo) y publicados como datos abiertos y de libre uso.
 
-Los trámites se obtienen en el archivo `tramites.jsonl` ejecutando `update.py`.
+Incluye:
 
-## Ejecución local
+- [Datos de cada trámite en su forma original en formato jsonl](tramites.jsonl)
+- [Una bitácora de trámites que aparecen o desaparecen en corridas consecutivas](adiciones.csv)
+- [Una bitácora de trámites que cambian entre corridas consecutivas](modificaciones.csv)
 
-Si quieres ejecutar en tu máquina, luego de clonar este repositorio puedes instalar las dependencias con pipenv.
+Estos datos son actualizados semanalmente cada domingo.
 
-1. `pipenv shell`
-2. `pipenv install`
-3. `python update.py`
+Puedes inspeccionar cómo exactamente estos datos son descargados y correr tu propia versión localmente:
 
+
+```sh
+pip install requests httpx[http2] asyncio tqdm jsonlines pandas
+python update.py
+```
