@@ -3,12 +3,11 @@
 import requests
 import httpx
 import asyncio
-import json
 from tqdm import tqdm
 import jsonlines
 from datetime import datetime, timezone
 import pandas as pd
-import os
+from pathlib import Path
 
 
 def listarTramites(pageSize=30):
@@ -80,7 +79,7 @@ def detectarModificaciones(df1, df2, timestamp):
     bitácora de estos trámites más una estampa de tiempo.
     """
 
-    FILENAME = "modificaciones.csv"
+    FILENAME = Path("modificaciones.csv")
 
     # Alinear trámites
     _df1, _df2 = df1.set_index("id").copy(), df2.set_index("id").copy()
@@ -111,10 +110,10 @@ def detectarModificaciones(df1, df2, timestamp):
             )
 
     # Guardar cambios
-    print(f"{len(parts)} modificaciones")
+    print(f"{len(parts)} trámites modificados")
     if len(parts) > 0:
         modificaciones = pd.concat(parts, ignore_index=True)
-        if os.path.exists(FILENAME):
+        if FILENAME.exists():
             modificaciones = pd.concat([pd.read_csv(FILENAME), modificaciones])
         modificaciones.sort_values(["timestamp", "id", "columna"]).to_csv(
             FILENAME, index=False
@@ -129,7 +128,7 @@ def detectarAdiciones(df1, df2, timestamp):
     más una estampa de tiempo.
     """
 
-    FILENAME = "adiciones.csv"
+    FILENAME = Path("adiciones.csv")
 
     # El formato de la bitácora
     def formatear(df, evento, timestamp):
@@ -148,9 +147,9 @@ def detectarAdiciones(df1, df2, timestamp):
     )
 
     # Guardar registros
-    print(f"{len(eventos.shape[0])} trámites que aparecen o desaparecen")
+    print(f"{eventos.shape[0]} trámites que aparecen o desaparecen")
     if eventos.shape[0] > 0:
-        if os.path.exists(FILENAME):
+        if FILENAME.exists():
             eventos = pd.concat([pd.read_csv(FILENAME), eventos])
 
         eventos.sort_values(["timestamp", "id", "tipo"]).to_csv(FILENAME, index=False)
@@ -165,28 +164,31 @@ async def main():
     o son modificados entre corridas consecutivas.
     """
 
-    FILENAME = "tramites.jsonl"
+    FILENAME = Path("tramites.jsonl")
     RETRIES = 5
 
     # Listar tramites
-    tramitesListado = listarTramites()
-    print(f"{len(tramitesListado)} tramites listados")
+    pendientes = listarTramites()
+    print(f"{len(pendientes)} tramites listados")
 
     # Estampa de tiempo
     timestamp = datetime.now(timezone.utc).isoformat(timespec="minutes")
 
-    # Descargar datos de cada trámite y reintentar errores
-    tramites, errores_tramites = await getTramites(tramitesListado)
-    print(f"{len(tramites)} registros, {len(errores_tramites)} errores")
-    while errores_tramites or RETRIES == 0:
-        print("Reintentando errores ...")
-        tramites_retried, errores_tramites = await getTramites(errores_tramites)
-        tramites.extend(tramites_retried)
-        RETRIES -= 1
-        print(f"{len(tramites)} registros, {len(errores_tramites)} errores")
+    tramites = []
+    for intento in range(1, RETRIES + 1):
+        print(f"{len(pendientes)} trámites pendientes")
+        ok, pendientes = await getTramites(pendientes)
+        tramites.extend(ok)
+        if not pendientes:
+            break
+        if intento < RETRIES:
+            print("Reintentando errores ...")
+            await asyncio.sleep(0.5 * intento)
+
+    print(f"{len(tramites)} registros, {len(pendientes)} errores")
 
     # Consolidar con datos recogidos previamente
-    if os.path.exists(FILENAME):
+    if FILENAME.exists():
         tramites_df = pd.json_normalize(tramites)
         with jsonlines.open(FILENAME, "r") as f:
             tramites_previos = pd.json_normalize([line for line in f])
@@ -196,16 +198,13 @@ async def main():
 
     # Guardar trámites y errores
     tramites_sorted = sorted(tramites, key=lambda d: d["id"])
-    for data, filename in zip(
-        [tramites_sorted, errores_tramites], ["tramites", "errores"]
-    ):
+    for data, filename in zip([tramites_sorted, pendientes], ["tramites", "errores"]):
         if data:
-            with open(f"{filename}.jsonl", "w", encoding="utf-8") as f:
+            with jsonlines.open(f"{filename}.jsonl", "w") as f:
                 for entry in data:
-                    json_line = json.dumps(entry, ensure_ascii=False)
-                    f.write(json_line + "\n")
+                    f.write(entry)
     print(
-        f"Datos guardados: {len(tramites_sorted)} trámites | {len(errores_tramites)} errores."
+        f"Datos guardados: {len(tramites_sorted)} trámites | {len(pendientes)} errores."
     )
 
 
