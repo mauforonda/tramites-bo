@@ -1,9 +1,5 @@
 """
-<<<<<<< HEAD
-Utilidades para obtención de trámites.
-=======
 Utilidades adicionales para obtención de trámites.
->>>>>>> ca536b5 (Decorator para hacer retry al hacer get tramite)
 """
 
 import asyncio
